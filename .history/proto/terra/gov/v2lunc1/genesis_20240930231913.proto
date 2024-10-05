@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package terra.gov.v2lunc1;
+
+import "terra/gov/v2lunc1/gov.proto";
+
+option go_package = "github.com/cosmos/cosmos-sdk/x/gov/types/v1";
+
+// GenesisState defines the gov module's genesis state.
+message GenesisState {
+  // starting_proposal_id is the ID of the starting proposal.
+  uint64 starting_proposal_id = 1;
+  // deposits defines all the deposits present at genesis.
+  repeated Deposit deposits = 2;
+  // votes defines all the votes present at genesis.
+  repeated Vote votes = 3;
+  // proposals defines all the proposals present at genesis.
+  repeated Proposal proposals = 4;
+  DepositParams deposit_params = 5 [deprecated = true];
+  VotingParams voting_params = 6 [deprecated = true];
+  TallyParams tally_params = 7 [deprecated = true];
+  Params params = 8;
+}
