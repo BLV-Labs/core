@@ -137,18 +137,18 @@ func (keeper Keeper) SetPriceLuncBaseUusd(ctx sdk.Context, proposalID uint64, am
 }
 
 // GetDepositLimitBaseUusd: calculate the minimum LUNC amount to deposit base on Uusd for the proposal
-func (keeper Keeper) GetMinimumDepositBaseUusd(ctx sdk.Context) (error, math.Int) {
+func (keeper Keeper) GetMinimumDepositBaseUusd(ctx sdk.Context) (math.Int, error) {
 	// Get exchange rate betweent Lunc/uusd from oracle
 	// save it to store
 	price, err := keeper.oracleKeeper.GetLunaExchangeRate(ctx, core.MicroUSDDenom)
 	if err != nil && price.LTE(sdk.ZeroDec()) {
-		return err, sdk.ZeroInt()
+		return sdk.ZeroInt(), err
 	}
 	minUusdDeposit := keeper.GetParams(ctx).MinUusdDeposit
 	totalLuncDeposit := sdk.NewDecFromInt(minUusdDeposit.Amount).Quo(price).TruncateInt()
 
 	if err != nil {
-		return err, sdk.ZeroInt()
+		return sdk.ZeroInt(), err
 	}
-	return nil, totalLuncDeposit
+	return totalLuncDeposit, nil
 }

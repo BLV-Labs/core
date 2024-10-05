@@ -23,7 +23,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 
-	v2lunc1 "github.com/classic-terra/core/v3/custom/gov/types/v2lunc1"
+	v2lunc1types "github.com/classic-terra/core/v3/custom/gov/types/v2lunc1"
 )
 
 var (
@@ -88,11 +88,11 @@ func setupGovKeeper(t *testing.T) (
 	govRouter := v1beta1.NewRouter() // Also register legacy gov handlers to test them too.
 	govRouter.AddRoute(types.RouterKey, v1beta1.ProposalHandler)
 	govKeeper.SetLegacyRouter(govRouter)
-	govKeeper.SetParams(ctx, v2lunc1.DefaultParams())
+	govKeeper.SetParams(ctx, v2lunc1types.DefaultParams())
 
 	// Register all handlers for the MegServiceRouter.
 	msr.SetInterfaceRegistry(encCfg.InterfaceRegistry)
-	v2lunc1.RegisterMsgServer(msr, keeper.NewMsgServerImpl(govKeeper))
+	v2lunc1types.RegisterMsgServer(msr, keeper.NewMsgServerImpl(govKeeper))
 	banktypes.RegisterMsgServer(msr, nil) // Nil is fine here as long as we never execute the proposal's Msgs.
 
 	return govKeeper, acctKeeper, bankKeeper, stakingKeeper, encCfg, ctx
