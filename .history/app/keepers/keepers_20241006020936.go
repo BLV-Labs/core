@@ -441,13 +441,12 @@ func NewAppKeepers(
 	// register the proposal types
 	govRouter := appKeepers.newGovRouter()
 	govConfig := govtypes.DefaultConfig()
-	govKeeper := customgovkeeper.NewKeeper(
+	govKeeper := govkeeper.NewKeeper(
 		appCodec,
 		appKeepers.keys[govtypes.StoreKey],
 		appKeepers.AccountKeeper,
 		appKeepers.BankKeeper,
 		appKeepers.StakingKeeper,
-		appKeepers.OracleKeeper,
 		bApp.MsgServiceRouter(),
 		govConfig,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
