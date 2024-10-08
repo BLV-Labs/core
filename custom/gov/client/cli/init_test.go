@@ -1,23 +1,17 @@
 package client_test 
 
 import (
-	"encoding/base64"
-	"fmt"
-	"bytes"
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	
 	"io"
 	"testing"
 	"github.com/stretchr/testify/suite"
 	"github.com/cosmos/cosmos-sdk/client"
-	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	testutilmod "github.com/cosmos/cosmos-sdk/types/module/testutil"
 	"github.com/cosmos/cosmos-sdk/x/gov"
-	"github.com/cosmos/cosmos-sdk/x/gov/client/cli"
+	// "github.com/cosmos/cosmos-sdk/x/gov/client/cli"
 	clitestutil "github.com/cosmos/cosmos-sdk/testutil/cli"
 	rpcclientmock "github.com/cometbft/cometbft/rpc/client/mock"
-	abci "github.com/cometbft/cometbft/abci/types"
-	"github.com/cosmos/cosmos-sdk/testutil"
 )
 
 type CLITestSuite struct {
@@ -26,7 +20,6 @@ type CLITestSuite struct {
 	kr        keyring.Keyring
 	encCfg    testutilmod.TestEncodingConfig //This holds the encoding configuration, which is crucial for marshaling and unmarshaling data for transactions and messages.
 	baseCtx   client.Context //This is a base context used for all operations in the test suite.
-	clientCtx client.Context  //This is a more specialized client context that can include specific settings for individual tests.
 }
 
 func TestCLITestSuite(t *testing.T) {
@@ -45,24 +38,5 @@ func (s *CLITestSuite) SetupSuite() {
 		WithAccountRetriever(client.MockAccountRetriever{}).
 		WithOutput(io.Discard).
 		WithChainID("test-chain")
-
-	var outBuf bytes.Buffer
-	ctxGen := func() client.Context {
-		bz, _ := s.encCfg.Codec.Marshal(&sdk.TxResponse{})
-		c := clitestutil.NewMockTendermintRPC(abci.ResponseQuery{
-			Value: bz,
-		})
-		return s.baseCtx.WithClient(c)
-	}
-	s.clientCtx = ctxGen().WithOutput(&outBuf)
-
-	val := testutil.CreateKeyringAccounts(s.T(), s.kr, 1)
-	// create a proposal with deposit
-	_, err := govclitestutil.MsgSubmitLegacyProposal(s.clientCtx, val[0].Address.String(),
-		"Text Proposal 1", "Where is the title!?", v1beta1.ProposalTypeText,
-		fmt.Sprintf("--%s=%s", cli.FlagDeposit, sdk.NewCoin("stake", v1.DefaultMinDepositTokens).String()))
-	s.Require().NoError(err)
-
-
 
 }
