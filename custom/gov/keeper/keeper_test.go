@@ -39,7 +39,7 @@ func (suite *KeeperTestSuite) SetupSuite() {
 }
 
 func (suite *KeeperTestSuite) reset() {
-	govKeeper, acctKeeper, bankKeeper, stakingKeeper, encCfg, ctx := setupGovKeeper(suite.T())
+	govKeeper, acctKeeper, bankKeeper, stakingKeeper, oracleKeeper, encCfg, ctx := setupGovKeeper(suite.T())
 
 	// Populate the gov account with some coins, as the TestProposal we have
 	// is a MsgSend from the gov account.
@@ -52,12 +52,12 @@ func (suite *KeeperTestSuite) reset() {
 	queryHelper := baseapp.NewQueryServerTestHelper(ctx, encCfg.InterfaceRegistry)
 	v1.RegisterQueryServer(queryHelper, govKeeper)
 	legacyQueryHelper := baseapp.NewQueryServerTestHelper(ctx, encCfg.InterfaceRegistry)
-	v1beta1.RegisterQueryServer(legacyQueryHelper, keeper.NewLegacyQueryServer(govKeeper))
+	v1beta1.RegisterQueryServer(legacyQueryHelper, keeper.NewLegacyQueryServer(govKeeper.Keeper))
 	queryClient := v1.NewQueryClient(queryHelper)
 	legacyQueryClient := v1beta1.NewQueryClient(legacyQueryHelper)
 
 	suite.ctx = ctx
-	suite.govKeeper = govKeeper
+	suite.govKeeper = govKeeper.Keeper
 	suite.acctKeeper = acctKeeper
 	suite.bankKeeper = bankKeeper
 	suite.stakingKeeper = stakingKeeper

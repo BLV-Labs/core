@@ -3,8 +3,13 @@ package keeper_test
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"cosmossdk.io/math"
+	"cosmossdk.io/store"
+	dbm "github.com/cometbft/cometbft-db"
+	"github.com/cometbft/cometbft/libs/log"
+
 	tmproto "github.com/cometbft/cometbft/proto/tendermint/types"
 	tmtime "github.com/cometbft/cometbft/types/time"
 	"github.com/golang/mock/gomock"
@@ -24,6 +29,10 @@ import (
 	minttypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 
 	v2lunc1types "github.com/classic-terra/core/v3/custom/gov/types/v2lunc1"
+	oraclekeeper "github.com/classic-terra/core/v3/x/oracle/keeper"
+	oracletypes "github.com/classic-terra/core/v3/x/oracle/types"
+	paramskeeper "github.com/cosmos/cosmos-sdk/x/params/keeper"
+	paramstypes "github.com/cosmos/cosmos-sdk/x/params/types"
 )
 
 var (
@@ -82,8 +91,9 @@ func setupGovKeeper(t *testing.T) (
 	stakingKeeper.EXPECT().IterateDelegations(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	stakingKeeper.EXPECT().TotalBondedTokens(gomock.Any()).Return(math.NewInt(10000000)).AnyTimes()
 
+	oracleKeeper := InitOracleKeeper(acctKeeper, bankKeeper, distrKeeper, stakingKeeper)
 	// Gov keeper initializations
-	govKeeper := keeper.NewKeeper(encCfg.Codec, key, acctKeeper, bankKeeper, stakingKeeper, msr, types.DefaultConfig(), govAcct.String())
+	govKeeper := keeper.NewKeeper(encCfg.Codec, key, acctKeeper, bankKeeper, stakingKeeper, oracleKeeper, msr, types.DefaultConfig(), govAcct.String())
 	govKeeper.SetProposalID(ctx, 1)
 	govRouter := v1beta1.NewRouter() // Also register legacy gov handlers to test them too.
 	govRouter.AddRoute(types.RouterKey, v1beta1.ProposalHandler)
@@ -95,7 +105,43 @@ func setupGovKeeper(t *testing.T) (
 	v2lunc1types.RegisterMsgServer(msr, keeper.NewMsgServerImpl(govKeeper))
 	banktypes.RegisterMsgServer(msr, nil) // Nil is fine here as long as we never execute the proposal's Msgs.
 
-	return govKeeper, acctKeeper, bankKeeper, stakingKeeper, encCfg, ctx
+	return govKeeper, acctKeeper, bankKeeper, stakingKeeper, oracleKeeper, encCfg, ctx
+}
+
+func InitOracleKeeper(accountKeeper types.AccountKeeper,
+	bankKeeper types.BankKeeper,
+	distrKeeper types.DistributionKeeper,
+	stakingKeeper types.StakingKeeper) {
+	encodingConfig := moduletestutil.MakeTestEncodingConfig()
+	keyOracle := sdk.NewKVStoreKey(types.StoreKey)
+	keyParams := sdk.NewKVStoreKey(paramstypes.StoreKey)
+	tKeyParams := sdk.NewTransientStoreKey(paramstypes.TStoreKey)
+
+	db := dbm.NewMemDB()
+	ms := store.NewCommitMultiStore(db)
+	ctx := sdk.NewContext(ms, tmproto.Header{Time: time.Now().UTC()}, false, log.NewNopLogger())
+
+	// Gov keeper initializations
+	appCodec, legacyAmino := encodingConfig.Codec, encodingConfig.Amino
+	paramsKeeper := paramskeeper.NewKeeper(appCodec, legacyAmino, keyParams, tKeyParams)
+
+	oracleKeeper := oraclekeeper.NewKeeper(
+		appCodec,
+		keyOracle,
+		paramsKeeper.Subspace(oracletypes.ModuleName),
+		accountKeeper,
+		bankKeeper,
+		distrKeeper,
+		stakingKeeper,
+		distrtypes.ModuleName,
+	)
+	oracleDefaultParams := oracletypes.DefaultParams()
+	oracleKeeper.SetParams(ctx, oracleDefaultParams)
+
+	for _, denom := range oracleDefaultParams.Whitelist {
+		oracleKeeper.SetTobinTax(ctx, denom.Name, denom.TobinTax)
+	}
+	// End Gov keeper initializations
 }
 
 // trackMockBalances sets up expected calls on the Mock BankKeeper, and also
