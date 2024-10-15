@@ -88,10 +88,10 @@ func (keeper Keeper) validateInitialDeposit(ctx sdk.Context, initialDeposit sdk.
 	if minInitialDepositRatio.IsZero() {
 		return nil
 	}
-	totalLuncDeposit, err := keeper.GetMinimumDepositBaseUusd(ctx)
-	luncCoin := sdk.NewCoin(params.MinDeposit[0].Denom, totalLuncDeposit)
+	requireAmountDeposit, err := keeper.GetMinimumDepositBaseUusd(ctx)
+	requireDepositCoin := sdk.NewCoin(params.MinDeposit[0].Denom, requireAmountDeposit)
 	minDepositCoins := params.MinDeposit
-	minDepositCoins[0] = luncCoin
+	minDepositCoins[0] = requireDepositCoin
 
 	if err != nil {
 		return err
