@@ -17,6 +17,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/module"
 	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 
+	customsimulation "github.com/classic-terra/core/v3/custom/gov/simulation"
 	"github.com/cosmos/cosmos-sdk/x/gov"
 	govclient "github.com/cosmos/cosmos-sdk/x/gov/client"
 	"github.com/cosmos/cosmos-sdk/x/gov/client/cli"
@@ -211,7 +212,7 @@ func (am AppModule) EndBlock(ctx sdk.Context, req abci.RequestEndBlock) []abci.V
 
 // GenerateGenesisState creates a randomized GenState of the gov module.
 func (AppModule) GenerateGenesisState(simState *module.SimulationState) {
-	simulation.RandomizedGenState(simState)
+	customsimulation.RandomizedGenState(simState)
 }
 
 // ProposalContents returns all the gov content functions used to
@@ -232,9 +233,9 @@ func (am AppModule) RegisterStoreDecoder(sdr sdk.StoreDecoderRegistry) {
 
 // WeightedOperations returns the all the gov module operations with their respective weights.
 func (am AppModule) WeightedOperations(simState module.SimulationState) []simtypes.WeightedOperation {
-	return simulation.WeightedOperations(
+	return customsimulation.WeightedOperations(
 		simState.AppParams, simState.Cdc,
-		am.accountKeeper, am.bankKeeper, am.keeper.Keeper,
+		am.accountKeeper, am.bankKeeper, &am.keeper,
 		simState.ProposalMsgs, simState.LegacyProposalContents,
 	)
 }
