@@ -167,3 +167,14 @@ func (c *Config) AddBurnTaxExemptionAddressProposal(chainANode *NodeConfig, addr
 		return status == "PROPOSAL_STATUS_PASSED"
 	}, initialization.OneMin, 10*time.Millisecond)
 }
+
+func (c *Config) AggregatePreVote(chainANode *NodeConfig, salt string, price string, denom string) {
+	voter := chainANode.GetWallet(initialization.ValidatorWalletName)
+	chainANode.AggregatePreVote(voter, salt, price, denom)
+}
+
+func (c *Config) AggregateVote(chainANode *NodeConfig, salt string, price string, denom string) {
+	voter := chainANode.GetWallet(initialization.ValidatorWalletName)
+	valAddress := chainANode.OperatorAddress
+	chainANode.AggregateVote(valAddress, voter, salt, price, denom)
+}

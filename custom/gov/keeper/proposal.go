@@ -91,10 +91,6 @@ func (keeper Keeper) SubmitProposal(ctx sdk.Context, messages []sdk.Msg, metadat
 		return v1.Proposal{}, err
 	}
 
-	keeper.SetProposal(ctx, proposal)
-	keeper.InsertInactiveProposalQueue(ctx, proposalID, *proposal.DepositEndTime)
-	keeper.SetProposalID(ctx, proposalID+1)
-
 	totalLuncDeposit, err := keeper.GetMinimumDepositBaseUusd(ctx)
 	if err != nil {
 		return v1.Proposal{}, sdkerrors.Wrap(v2lunc1types.ErrQueryExchangeRateUusdFail, err.Error())
@@ -104,6 +100,10 @@ func (keeper Keeper) SubmitProposal(ctx sdk.Context, messages []sdk.Msg, metadat
 	if err != nil {
 		return v1.Proposal{}, sdkerrors.Wrap(v2lunc1types.ErrQueryExchangeRateUusdFail, err.Error())
 	}
+
+	keeper.SetProposal(ctx, proposal)
+	keeper.InsertInactiveProposalQueue(ctx, proposalID, *proposal.DepositEndTime)
+	keeper.SetProposalID(ctx, proposalID+1)
 
 	// called right after a proposal is submitted
 	keeper.Hooks().AfterProposalSubmission(ctx, proposalID)

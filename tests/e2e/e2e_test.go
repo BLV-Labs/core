@@ -92,8 +92,17 @@ func (s *IntegrationTestSuite) TestAddBurnTaxExemptionAddress() {
 	node, err := chain.GetDefaultNode()
 	s.Require().NoError(err)
 
+	// Node B
+	// nodeB := chain.NodeConfigs[1]
+
 	whitelistAddr1 := node.CreateWallet("whitelist1")
 	whitelistAddr2 := node.CreateWallet("whitelist2")
+
+	// Aggregate prevote & vote price lunc by uusd
+	chain.AggregatePreVote(node, "1234", "1", initialization.UusdDenom)
+	chain.AggregateVote(node, "1234", "1", initialization.UusdDenom)
+	// chain.AggregatePreVote(nodeB, "1235", "1", initialization.UusdDenom)
+	// chain.AggregateVote(nodeB, "1235", "1", initialization.UusdDenom)
 
 	chain.AddBurnTaxExemptionAddressProposal(node, whitelistAddr1, whitelistAddr2)
 

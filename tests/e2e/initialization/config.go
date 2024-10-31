@@ -22,6 +22,7 @@ import (
 	govv2lunc1 "github.com/classic-terra/core/v3/custom/gov/types/v2lunc1"
 
 	"github.com/classic-terra/core/v3/tests/e2e/util"
+	oracletypes "github.com/classic-terra/core/v3/x/oracle/types"
 	treasurytypes "github.com/classic-terra/core/v3/x/treasury/types"
 )
 
@@ -43,6 +44,7 @@ const (
 	// common
 	TerraDenom          = "uluna"
 	AtomDenom           = "uatom"
+	UusdDenom           = "uusd"
 	TerraIBCDenom       = "ibc/4627AD2524E3E0523047E35BB76CC90E37D9D57ACF14F0FCBCEB2480705F3CB8"
 	MinGasPrice         = "0.000"
 	IbcSendAmount       = 3300000000
@@ -246,6 +248,11 @@ func initGenesis(chain *internalChain, forkHeight int) error {
 		return err
 	}
 
+	err = updateModuleGenesis(appGenState, oracletypes.ModuleName, &oracletypes.GenesisState{}, updateOracleGenesis)
+	if err != nil {
+		return err
+	}
+
 	err = updateModuleGenesis(appGenState, govtypes.ModuleName, &govv2lunc1.GenesisState{}, updateGovGenesis)
 	if err != nil {
 		return err
@@ -316,6 +323,11 @@ func updateGovGenesis(govGenState *govv2lunc1.GenesisState) {
 	govGenState.Params.VotingPeriod = &OneMin
 	govGenState.Params.Quorum = sdk.NewDecWithPrec(2, 1).String()
 	govGenState.Params.MinDeposit = tenTerra
+	govGenState.Params.MinUusdDeposit = sdk.NewCoin(UusdDenom, sdk.NewInt(500_000_000))
+}
+
+func updateOracleGenesis(oracleGenState *oracletypes.GenesisState) {
+	oracleGenState.Params.VoteThreshold = sdk.NewDecWithPrec(25, 2) // 25%
 }
 
 func updateGenUtilGenesis(c *internalChain) func(*genutiltypes.GenesisState) {

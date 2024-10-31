@@ -160,6 +160,39 @@ func (n *NodeConfig) SendIBCTransfer(from, recipient, amount, memo string) {
 	n.LogActionF("successfully submitted sent IBC transfer")
 }
 
+func (n *NodeConfig) AggregatePreVote(voter string, salt string, price string, denom string) {
+	n.LogActionF("aggregating pre-vote price %s of denom %s for salt %s", price, denom, salt)
+	cmd := []string{"terrad", "tx", "oracle", "aggregate-prevote", salt, fmt.Sprintf("%s%s", price, denom), fmt.Sprintf("--from=%s", voter), "--yes"}
+	_, _, err := n.containerManager.ExecTxCmd(n.t, n.chainID, n.Name, cmd)
+	require.NoError(n.t, err)
+	n.LogActionF("successfully aggregated prevote price %s of denom %s for salt %s", price, denom, salt)
+}
+
+func (n *NodeConfig) AggregateVote(valAddress string, voter string, salt string, price string, denom string) {
+	n.LogActionF("aggregating vote price %s of denom %s for salt %s", price, denom, salt)
+	cmd := []string{"terrad", "tx", "oracle", "aggregate-vote", salt, fmt.Sprintf("%s%s", price, denom), valAddress, fmt.Sprintf("--from=%s", voter), "--yes"}
+	_, _, err := n.containerManager.ExecTxCmd(n.t, n.chainID, n.Name, cmd)
+	require.NoError(n.t, err)
+	n.LogActionF("successfully aggregated price %s of denom %s for salt %s", price, denom, salt)
+}
+
+func (n *NodeConfig) GetValidatorAddress() (address string) {
+	n.LogActionF("getting validator address")
+	cmd := []string{"terrad", "query", "staking", "validators", "--output=json"}
+	out, _, err := n.containerManager.ExecCmd(n.t, n.Name, cmd, "", false)
+	require.NoError(n.t, err)
+
+	var result map[string]interface{}
+	err = json.Unmarshal(out.Bytes(), &result)
+
+	fmt.Printf("result: %v\n", result)
+
+	require.NoError(n.t, err)
+	address = result["validators"].([]interface{})[1].(map[string]interface{})["operator_address"].(string)
+
+	return address
+}
+
 func (n *NodeConfig) SubmitTextProposal(text string, initialDeposit sdk.Coin) {
 	n.LogActionF("submitting text gov proposal")
 	cmd := []string{"terrad", "tx", "gov", "submit-proposal", "--type=text", fmt.Sprintf("--title=\"%s\"", text), "--description=\"test text proposal\"", "--from=val", fmt.Sprintf("--deposit=%s", initialDeposit)}
@@ -170,7 +203,7 @@ func (n *NodeConfig) SubmitTextProposal(text string, initialDeposit sdk.Coin) {
 
 func (n *NodeConfig) DepositProposal(proposalNumber int) {
 	n.LogActionF("depositing on proposal: %d", proposalNumber)
-	deposit := sdk.NewCoin(initialization.TerraDenom, sdk.NewInt(20*assets.MicroUnit)).String()
+	deposit := sdk.NewCoin(initialization.TerraDenom, sdk.NewInt(500*assets.MicroUnit)).String()
 	cmd := []string{"terrad", "tx", "gov", "deposit", fmt.Sprintf("%d", proposalNumber), deposit, "--from=val"}
 	_, _, err := n.containerManager.ExecTxCmd(n.t, n.chainID, n.Name, cmd)
 	require.NoError(n.t, err)
