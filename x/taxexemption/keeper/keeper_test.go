@@ -9,6 +9,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdkquery "github.com/cosmos/cosmos-sdk/types/query"
 
 	"github.com/classic-terra/core/v3/x/taxexemption/types"
 )
@@ -550,6 +551,136 @@ func TestListTaxExemptionAddresses(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, listedAddresses, 2)
 	require.NotNil(t, pageRes)
+}
+
+// TestListTaxExemptionZones tests the ListTaxExemptionZones function
+func TestListTaxExemptionZones(t *testing.T) {
+	input := CreateTestInput(t)
+
+	// Add multiple test zones
+	testZones := []types.Zone{
+		{
+			Name:      "zone1",
+			Outgoing:  true,
+			Incoming:  false,
+			CrossZone: false,
+		},
+		{
+			Name:      "zone2",
+			Outgoing:  false,
+			Incoming:  true,
+			CrossZone: false,
+		},
+		{
+			Name:      "zone3",
+			Outgoing:  false,
+			Incoming:  false,
+			CrossZone: true,
+		},
+		{
+			Name:      "zone4",
+			Outgoing:  true,
+			Incoming:  true,
+			CrossZone: false,
+		},
+		{
+			Name:      "zone5",
+			Outgoing:  true,
+			Incoming:  true,
+			CrossZone: true,
+		},
+	}
+
+	// Add all test zones
+	for _, zone := range testZones {
+		err := input.TaxExemptionKeeper.AddTaxExemptionZone(input.Ctx, zone)
+		require.NoError(t, err, "Adding zone should not error")
+	}
+
+	// Test case 1: List all zones without pagination
+	t.Run("List all zones without pagination", func(t *testing.T) {
+		req := &types.QueryTaxExemptionZonesRequest{
+			Pagination: nil,
+		}
+
+		zones, _, err := input.TaxExemptionKeeper.ListTaxExemptionZones(input.Ctx, req)
+		require.NoError(t, err, "Listing zones should not error")
+		require.Len(t, zones, len(testZones), "Should return all zones")
+
+		// Verify zone contents
+		for i, zone := range zones {
+			require.Equal(t, testZones[i].Name, zone.Name, "Zone name should match")
+			require.Equal(t, testZones[i].Outgoing, zone.Outgoing, "Outgoing flag should match")
+			require.Equal(t, testZones[i].Incoming, zone.Incoming, "Incoming flag should match")
+			require.Equal(t, testZones[i].CrossZone, zone.CrossZone, "CrossZone flag should match")
+		}
+	})
+
+	// Test case 2: List zones with pagination (2 items per page)
+	t.Run("List zones with pagination", func(t *testing.T) {
+		pageReq := &sdkquery.PageRequest{
+			Limit:  2,
+			Offset: 0,
+		}
+		req := &types.QueryTaxExemptionZonesRequest{
+			Pagination: pageReq,
+		}
+
+		zones, pageRes, err := input.TaxExemptionKeeper.ListTaxExemptionZones(input.Ctx, req)
+		require.NoError(t, err, "Listing zones with pagination should not error")
+		require.Len(t, zones, 2, "Should return 2 zones")
+		require.NotNil(t, pageRes, "Page response should not be nil")
+		require.NotNil(t, pageRes.NextKey, "Next key should be present")
+	})
+
+	// Test case 3: List zones with offset
+	t.Run("List zones with offset", func(t *testing.T) {
+		pageReq := &sdkquery.PageRequest{
+			Limit:  2,
+			Offset: 3, // Skip first 3 zones
+		}
+		req := &types.QueryTaxExemptionZonesRequest{
+			Pagination: pageReq,
+		}
+
+		zones, pageRes, err := input.TaxExemptionKeeper.ListTaxExemptionZones(input.Ctx, req)
+		require.NoError(t, err, "Listing zones with offset should not error")
+		require.Len(t, zones, 2, "Should return 2 zones")
+		require.NotNil(t, pageRes, "Page response should not be nil")
+	})
+
+	// Test case 4: List zones with limit larger than remaining items
+	t.Run("List zones with large limit", func(t *testing.T) {
+		pageReq := &sdkquery.PageRequest{
+			Limit:  10, // Larger than total number of zones
+			Offset: 0,
+		}
+		req := &types.QueryTaxExemptionZonesRequest{
+			Pagination: pageReq,
+		}
+
+		zones, pageRes, err := input.TaxExemptionKeeper.ListTaxExemptionZones(input.Ctx, req)
+		require.NoError(t, err, "Listing zones with large limit should not error")
+		require.Len(t, zones, len(testZones), "Should return all zones")
+		require.NotNil(t, pageRes, "Page response should not be nil")
+		require.Nil(t, pageRes.NextKey, "Next key should be nil as all items are returned")
+	})
+
+	// Test case 5: List zones with zero limit
+	t.Run("List zones with zero limit", func(t *testing.T) {
+		pageReq := &sdkquery.PageRequest{
+			Limit:  0, // Should return all zones
+			Offset: 0,
+		}
+		req := &types.QueryTaxExemptionZonesRequest{
+			Pagination: pageReq,
+		}
+
+		zones, pageRes, err := input.TaxExemptionKeeper.ListTaxExemptionZones(input.Ctx, req)
+		require.NoError(t, err, "Listing zones with zero limit should not error")
+		require.Len(t, zones, len(testZones), "Should return all zones")
+		require.NotNil(t, pageRes, "Page response should not be nil")
+	})
 }
 
 // TestIsExemptedFromTaxAllCases tests all possible combinations of Outgoing, CrossZone, and Incoming flags
