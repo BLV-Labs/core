@@ -7,6 +7,7 @@ import (
 
 	"github.com/cometbft/cometbft/crypto/secp256k1"
 
+	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/classic-terra/core/v3/x/taxexemption/types"
@@ -421,4 +422,258 @@ func TestRemoveTaxExemptionAddress(t *testing.T) {
 	// Test removing invalid address format
 	err = input.TaxExemptionKeeper.RemoveTaxExemptionAddress(input.Ctx, zone2.Name, "invalid-address")
 	require.Error(t, err, "Removing invalid address should error")
+}
+
+// TestGetTaxExemptionZone tests the GetTaxExemptionZone function
+func TestGetTaxExemptionZone(t *testing.T) {
+	input := CreateTestInput(t)
+
+	// Test getting non-existent zone
+	_, err := input.TaxExemptionKeeper.GetTaxExemptionZone(input.Ctx, "nonexistent")
+	require.Error(t, err, "Getting non-existent zone should error")
+	require.Contains(t, err.Error(), "no such zone in exemption list")
+
+	// Add a test zone
+	testZone := types.Zone{
+		Name:      "test_zone",
+		Outgoing:  true,
+		Incoming:  false,
+		CrossZone: true,
+	}
+	err = input.TaxExemptionKeeper.AddTaxExemptionZone(input.Ctx, testZone)
+	require.NoError(t, err)
+
+	// Test getting existing zone
+	zone, err := input.TaxExemptionKeeper.GetTaxExemptionZone(input.Ctx, testZone.Name)
+	require.NoError(t, err)
+	require.Equal(t, testZone.Name, zone.Name)
+	require.Equal(t, testZone.Outgoing, zone.Outgoing)
+	require.Equal(t, testZone.Incoming, zone.Incoming)
+	require.Equal(t, testZone.CrossZone, zone.CrossZone)
+}
+
+// TestCheckAndCacheZone tests the checkAndCacheZone function
+func TestCheckAndCacheZone(t *testing.T) {
+	input := CreateTestInput(t)
+	store := prefix.NewStore(input.Ctx.KVStore(input.TaxExemptionKeeper.storeKey), types.TaxExemptionListPrefix)
+	zoneCache := make(map[string]types.Zone)
+
+	// Create test address and zone
+	pubKey := secp256k1.GenPrivKey().PubKey()
+	address := sdk.AccAddress(pubKey.Address())
+	testZone := types.Zone{
+		Name:      "test_zone",
+		Outgoing:  true,
+		Incoming:  false,
+		CrossZone: true,
+	}
+
+	// Test with non-existent address
+	zone, exists := input.TaxExemptionKeeper.checkAndCacheZone(input.Ctx, store, address.String(), zoneCache)
+	require.False(t, exists)
+	require.Empty(t, zone)
+
+	// Add zone and associate address with it
+	err := input.TaxExemptionKeeper.AddTaxExemptionZone(input.Ctx, testZone)
+	require.NoError(t, err)
+	err = input.TaxExemptionKeeper.AddTaxExemptionAddress(input.Ctx, testZone.Name, address.String())
+	require.NoError(t, err)
+
+	// Test with existing address
+	zone, exists = input.TaxExemptionKeeper.checkAndCacheZone(input.Ctx, store, address.String(), zoneCache)
+	require.True(t, exists)
+	require.Equal(t, testZone.Name, zone.Name)
+
+	// Test cache functionality
+	cachedZone, exists := zoneCache[testZone.Name]
+	require.True(t, exists)
+	require.Equal(t, testZone.Name, cachedZone.Name)
+}
+
+// TestListTaxExemptionAddresses tests the ListTaxExemptionAddresses function
+func TestListTaxExemptionAddresses(t *testing.T) {
+	input := CreateTestInput(t)
+
+	// Create test addresses
+	addresses := make([]sdk.AccAddress, 3)
+	for i := 0; i < 3; i++ {
+		pubKey := secp256k1.GenPrivKey().PubKey()
+		addresses[i] = sdk.AccAddress(pubKey.Address())
+	}
+
+	// Create test zones
+	zones := []types.Zone{
+		{
+			Name:      "zone1",
+			Outgoing:  true,
+			Incoming:  false,
+			CrossZone: false,
+		},
+		{
+			Name:      "zone2",
+			Outgoing:  false,
+			Incoming:  true,
+			CrossZone: true,
+		},
+	}
+
+	// Add zones
+	for _, zone := range zones {
+		err := input.TaxExemptionKeeper.AddTaxExemptionZone(input.Ctx, zone)
+		require.NoError(t, err)
+	}
+
+	// Add addresses to zones
+	err := input.TaxExemptionKeeper.AddTaxExemptionAddress(input.Ctx, zones[0].Name, addresses[0].String())
+	require.NoError(t, err)
+	err = input.TaxExemptionKeeper.AddTaxExemptionAddress(input.Ctx, zones[0].Name, addresses[1].String())
+	require.NoError(t, err)
+	err = input.TaxExemptionKeeper.AddTaxExemptionAddress(input.Ctx, zones[1].Name, addresses[2].String())
+	require.NoError(t, err)
+
+	// Test listing all addresses
+	req := &types.QueryTaxExemptionAddressRequest{
+		ZoneName:   "",
+		Pagination: nil,
+	}
+	listedAddresses, pageRes, err := input.TaxExemptionKeeper.ListTaxExemptionAddresses(input.Ctx, req)
+	require.NoError(t, err)
+	require.Len(t, listedAddresses, len(addresses))
+	require.NotNil(t, pageRes)
+
+	// Test listing addresses for specific zone
+	req = &types.QueryTaxExemptionAddressRequest{
+		ZoneName:   zones[0].Name,
+		Pagination: nil,
+	}
+	listedAddresses, pageRes, err = input.TaxExemptionKeeper.ListTaxExemptionAddresses(input.Ctx, req)
+	require.NoError(t, err)
+	require.Len(t, listedAddresses, 2)
+	require.NotNil(t, pageRes)
+}
+
+// TestIsExemptedFromTaxAllCases tests all possible combinations of Outgoing, CrossZone, and Incoming flags
+func TestIsExemptedFromTaxAllCases(t *testing.T) {
+	input := CreateTestInput(t)
+
+	// Create test addresses
+	pubKey1 := secp256k1.GenPrivKey().PubKey()
+	pubKey2 := secp256k1.GenPrivKey().PubKey()
+	pubKey3 := secp256k1.GenPrivKey().PubKey()
+	addr1 := sdk.AccAddress(pubKey1.Address())
+	addr2 := sdk.AccAddress(pubKey2.Address())
+	addr3 := sdk.AccAddress(pubKey3.Address()) // Address not in any zone
+
+	// Test cases for zone configurations
+	testCases := []struct {
+		name         string
+		zone1        types.Zone
+		zone2        types.Zone
+		sender       string
+		recipient    string
+		expectExempt bool
+		description  string
+	}{
+		{
+			name:         "Same Zone - All Flags False",
+			zone1:        types.Zone{Name: "zone1", Outgoing: false, Incoming: false, CrossZone: false},
+			zone2:        types.Zone{Name: "zone1", Outgoing: false, Incoming: false, CrossZone: false},
+			sender:       addr1.String(),
+			recipient:    addr2.String(),
+			expectExempt: true, // Same zone always exempt
+			description:  "Transactions within the same zone are always exempt",
+		},
+		{
+			name:         "Different Zones - All Flags False",
+			zone1:        types.Zone{Name: "zone1", Outgoing: false, Incoming: false, CrossZone: false},
+			zone2:        types.Zone{Name: "zone2", Outgoing: false, Incoming: false, CrossZone: false},
+			sender:       addr1.String(),
+			recipient:    addr2.String(),
+			expectExempt: false,
+			description:  "No cross-zone permissions",
+		},
+		{
+			name:         "Sender Zone Only - Outgoing True",
+			zone1:        types.Zone{Name: "zone1", Outgoing: true, Incoming: false, CrossZone: true},
+			zone2:        types.Zone{Name: "zone2", Outgoing: false, Incoming: false, CrossZone: false},
+			sender:       addr1.String(),
+			recipient:    addr3.String(),
+			expectExempt: true,
+			description:  "Sender zone allows outgoing transactions",
+		},
+		{
+			name:         "Recipient Zone Only - Incoming True",
+			zone1:        types.Zone{Name: "zone1", Outgoing: false, Incoming: false, CrossZone: false},
+			zone2:        types.Zone{Name: "zone2", Outgoing: false, Incoming: true, CrossZone: true},
+			sender:       addr1.String(),
+			recipient:    addr2.String(),
+			expectExempt: true,
+			description:  "Recipient zone allows incoming transactions",
+		},
+		{
+			name:         "Cross-Zone - Sender Outgoing & CrossZone True",
+			zone1:        types.Zone{Name: "zone1", Outgoing: true, Incoming: false, CrossZone: true},
+			zone2:        types.Zone{Name: "zone2", Outgoing: false, Incoming: false, CrossZone: false},
+			sender:       addr1.String(),
+			recipient:    addr2.String(),
+			expectExempt: true,
+			description:  "Sender zone allows outgoing and cross-zone transactions",
+		},
+		{
+			name:         "Cross-Zone - Recipient Incoming & CrossZone True",
+			zone1:        types.Zone{Name: "zone1", Outgoing: false, Incoming: false, CrossZone: false},
+			zone2:        types.Zone{Name: "zone2", Outgoing: false, Incoming: true, CrossZone: true},
+			sender:       addr1.String(),
+			recipient:    addr2.String(),
+			expectExempt: true,
+			description:  "Recipient zone allows incoming and cross-zone transactions",
+		},
+		{
+			name:         "Cross-Zone - Both Zones CrossZone True but No Incoming/Outgoing",
+			zone1:        types.Zone{Name: "zone1", Outgoing: false, Incoming: false, CrossZone: true},
+			zone2:        types.Zone{Name: "zone2", Outgoing: false, Incoming: false, CrossZone: true},
+			sender:       addr1.String(),
+			recipient:    addr2.String(),
+			expectExempt: false,
+			description:  "Cross-zone enabled but no incoming/outgoing permissions",
+		},
+		{
+			name:         "No Zones - Both Addresses",
+			zone1:        types.Zone{},
+			zone2:        types.Zone{},
+			sender:       addr3.String(),
+			recipient:    addr3.String(),
+			expectExempt: false,
+			description:  "Neither address is in a zone",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Reset keeper state for each test case
+			input = CreateTestInput(t)
+
+			if tc.zone1.Name != "" {
+				err := input.TaxExemptionKeeper.AddTaxExemptionZone(input.Ctx, tc.zone1)
+				require.NoError(t, err)
+				if tc.sender != addr3.String() {
+					err = input.TaxExemptionKeeper.AddTaxExemptionAddress(input.Ctx, tc.zone1.Name, addr1.String())
+					require.NoError(t, err)
+				}
+			}
+
+			if tc.zone2.Name != "" {
+				err := input.TaxExemptionKeeper.AddTaxExemptionZone(input.Ctx, tc.zone2)
+				require.NoError(t, err)
+				if tc.recipient != addr3.String() {
+					err = input.TaxExemptionKeeper.AddTaxExemptionAddress(input.Ctx, tc.zone2.Name, addr2.String())
+					require.NoError(t, err)
+				}
+			}
+
+			// Test tax exemption
+			isExempt := input.TaxExemptionKeeper.IsExemptedFromTax(input.Ctx, tc.sender, tc.recipient)
+			require.Equal(t, tc.expectExempt, isExempt, tc.description)
+		})
+	}
 }
