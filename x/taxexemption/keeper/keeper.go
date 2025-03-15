@@ -273,9 +273,11 @@ func (k Keeper) ListTaxExemptionZones(c sdk.Context, req *types.QueryTaxExemptio
 
 	// Create a paginated iterator over the store
 	pageRes, err := query.FilteredPaginate(sub, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
-		var zone types.Zone
-		k.cdc.MustUnmarshal(value, &zone)
-		zones = append(zones, zone)
+		if (accumulate) {
+			var zone types.Zone
+			k.cdc.MustUnmarshal(value, &zone)
+			zones = append(zones, zone)
+		}
 
 		return true, nil
 	})
