@@ -47,8 +47,8 @@ func (k Keeper) Logger(ctx sdk.Context) log.Logger {
 	return ctx.Logger().With("module", fmt.Sprintf("x/%s", types.ModuleName))
 }
 
-func (k Keeper) GetAuthority() sdk.AccAddress {
-	return sdk.AccAddress(k.authority)
+func (k Keeper) GetAuthority() string {
+	return k.authority
 }
 
 func (k Keeper) GetTaxExemptionZone(ctx sdk.Context, zoneName string) (types.Zone, error) {
@@ -273,7 +273,7 @@ func (k Keeper) ListTaxExemptionZones(c sdk.Context, req *types.QueryTaxExemptio
 
 	// Create a paginated iterator over the store
 	pageRes, err := query.FilteredPaginate(sub, req.Pagination, func(key []byte, value []byte, accumulate bool) (bool, error) {
-		if (accumulate) {
+		if accumulate {
 			var zone types.Zone
 			k.cdc.MustUnmarshal(value, &zone)
 			zones = append(zones, zone)
