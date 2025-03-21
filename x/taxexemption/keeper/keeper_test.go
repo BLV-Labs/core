@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -8,6 +9,8 @@ import (
 	"github.com/cometbft/cometbft/crypto/secp256k1"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
 
 	"github.com/classic-terra/core/v3/x/taxexemption/types"
 )
@@ -30,6 +33,14 @@ func TestTaxExemptionList(t *testing.T) {
 	address4 := sdk.AccAddress(pubKey4.Address())
 	address5 := sdk.AccAddress(pubKey5.Address())
 
+	govAddr := input.TaxExemptionKeeper.GetAuthority()
+	fmt.Printf("\n GetAuthority %s", govAddr)
+
+	govAddr = authtypes.NewModuleAddress(govtypes.ModuleName).String()
+
+	fmt.Printf("\n GetModuleAddress %s", govAddr)
+
+	//
 	// add a zone
 	input.TaxExemptionKeeper.AddTaxExemptionZone(input.Ctx, types.Zone{Name: "zone1", Outgoing: false, Incoming: false, CrossZone: false})
 	input.TaxExemptionKeeper.AddTaxExemptionZone(input.Ctx, types.Zone{Name: "zone2", Outgoing: true, Incoming: false, CrossZone: false})
