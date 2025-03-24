@@ -18,7 +18,15 @@ func Test_AddTaxExemptionZone(t *testing.T) {
 
 	server := ultil.NewMsgServerImpl(k)
 	authority := k.GetAuthority()
-
+	// Check empty zones
+	msgEmpty := types.MsgAddTaxExemptionZone{
+		Zone:      "",
+		Authority: authority,
+	}
+	resp, err := server.AddTaxExemptionZone(sdk.WrapSDKContext(ctx), &msgEmpty)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "zone name cannot be empty")
+	require.Nil(t, resp)
 	// Test case 1: Adding a zone with valid authority
 	msg := types.MsgAddTaxExemptionZone{
 		Zone:      "zone1",
@@ -28,7 +36,7 @@ func Test_AddTaxExemptionZone(t *testing.T) {
 		CrossZone: false,
 	}
 
-	resp, err := server.AddTaxExemptionZone(sdk.WrapSDKContext(ctx), &msg)
+	resp, err = server.AddTaxExemptionZone(sdk.WrapSDKContext(ctx), &msg)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 
@@ -101,6 +109,15 @@ func TestMsgServer_RemoveTaxExemptionZone(t *testing.T) {
 
 	server := ultil.NewMsgServerImpl(k)
 	authority := k.GetAuthority()
+	// Check empty zones
+	msgEmpty := types.MsgRemoveTaxExemptionZone{
+		Zone:      "",
+		Authority: authority,
+	}
+	respEmpty, errEmpty := server.RemoveTaxExemptionZone(sdk.WrapSDKContext(ctx), &msgEmpty)
+	require.Error(t, errEmpty)
+	require.Contains(t, errEmpty.Error(), "zone name cannot be empty")
+	require.Nil(t, respEmpty)
 
 	// First add a zone
 	addMsg := types.MsgAddTaxExemptionZone{
@@ -162,6 +179,16 @@ func TestMsgServer_ModifyTaxExemptionZone(t *testing.T) {
 
 	server := ultil.NewMsgServerImpl(k)
 	authority := k.GetAuthority()
+
+	// Check empty zones
+	msgEmpty := types.MsgModifyTaxExemptionZone{
+		Zone:      "",
+		Authority: authority,
+	}
+	respEmpty, errEmpty := server.ModifyTaxExemptionZone(sdk.WrapSDKContext(ctx), &msgEmpty)
+	require.Error(t, errEmpty)
+	require.Contains(t, errEmpty.Error(), "zone name cannot be empty")
+	require.Nil(t, respEmpty)
 
 	// First add a zone
 	addMsg := types.MsgAddTaxExemptionZone{
