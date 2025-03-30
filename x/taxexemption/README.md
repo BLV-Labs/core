@@ -199,6 +199,22 @@ The module uses two prefixed stores:
 A user can query and interact with the `taxexemption` module using the command-line interface (CLI).
 
 ---
+The tax exemption module provides governance-controlled functionalities to manage tax-exempt zones and addresses. The process involves creating draft proposals, validating their format, and submitting them for governance approval.
+----------------------------------------------------------------
+Before submitting a proposal, users must create a draft proposal. Each proposal type has a specific msg type. Examples:
+
+Add a tax-exempt zone: terra.taxexemption.v1.MsgAddTaxExemptionZone
+
+Remove a tax-exempt zone: terra.taxexemption.v1.MsgRemoveTaxExemptionZone
+
+Add addresses to tax-exempt list: terra.taxexemption.v1.MsgAddTaxExemptionAddress
+
+Remove addresses from tax-exempt list: terra.taxexemption.v1.MsgRemoveTaxExemptionAddress
+
+The draft proposal creation command:
+```bash
+terrad tx gov draft-proposal
+```
 
 ## 📌 ProposalAddTaxExemptionZone
 
@@ -207,7 +223,7 @@ This command allows users to submit a **governance proposal** to add a new **tax
 ### 🧾 Syntax
 
 ```bash
-simd tx gov submit-proposal add-tax-exemption-zone [zone] [addresses] \
+terrad tx gov submit-proposal add-tax-exemption-zone [zone] [addresses] \
   [--exempt-incoming] [--exempt-outgoing] [--exempt-cross-zone] \
   --title [text] \
   --description [text] \
@@ -223,7 +239,7 @@ This command allows users to submit a governance proposal that modifies an exist
 ### 🧾 Syntax
 
 ```bash
-simd  tx gov submit-proposal modify-tax-exemption-zone [zone] [--exempt-incoming] [--exempt-outgoing] [--exempt-cross-zone] --title [text] --description [text]
+terrad  tx gov submit-proposal modify-tax-exemption-zone [zone] [--exempt-incoming] [--exempt-outgoing] [--exempt-cross-zone] --title [text] --description [text]
 ```
 Example:
 ```bash
@@ -236,7 +252,7 @@ This command allows users to submit a governance proposal that removes a registe
 ### 🧾 Syntax
 
 ```bash
-simd tx gov submit-proposal remove-tax-exemption-zone [zone] \
+terrad tx gov submit-proposal remove-tax-exemption-zone [zone] \
   --title [proposal_title] \
   --description [proposal_description] 
 
@@ -252,7 +268,7 @@ This command allows users to submit a governance proposal to add tax-exempt addr
 ### 🧾 Syntax
 
 ```bash
-simd tx gov submit-proposal add-tax-exemption-address [zone] [addresses] --title [text] --description [text]
+terrad tx gov submit-proposal add-tax-exemption-address [zone] [addresses] --title [text] --description [text]
 
 ```
 Example:
@@ -264,7 +280,7 @@ This function allows users to submit a governance proposal to remove tax-exempt 
 ### 🧾 Syntax
 
 ```bash
-simd tx gov submit-proposal remove-tax-exemption-address [zone] [addresses] --title [text] --description [text]
+terrad tx gov submit-proposal remove-tax-exemption-address [zone] [addresses] --title [text] --description [text]
 
 ```
 Example:
@@ -276,7 +292,7 @@ This command allows users to check whether a transaction from a given sender add
 ### 🧾 Syntax
 
 ```bash
-simd query taxable [from-address] [to-address]
+terrad query taxable [from-address] [to-address]
 ```
 
 ## 📌 GetCmdQueryZonelist
@@ -292,6 +308,6 @@ This command allows users to query and retrieve all tax-exempt addresses associa
 ### 🧾 Syntax
 
 ```bash
-simd query taxable addresses [zone-name]
+terrad query taxable addresses [zone-name]
 ```
 
