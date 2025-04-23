@@ -268,7 +268,10 @@ terrad query taxable addresses [zone-name]
 ```
 
 # Cast Your Vote
-Yes: Approve the implementation of the tax-exemption module
+Yes: Approve the implementation of the tax-exemption module.
+
 No: Reject the proposal and maintain the current tax system.
+
 No vote: You do not have a strong opinion and will accept the majority decision.
+
 Veto: You believe the proposal is harmful and should not be implemented.
